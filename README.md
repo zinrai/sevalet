@@ -154,15 +154,11 @@ $ curl http://localhost:8080/ready
 
 ## Security Considerations
 
-1. **Command Allow-listing**: Only explicitly configured commands and arguments can be executed
-
-2. **Privilege Separation**: API server runs without privileges in a container, while the daemon runs on the host with minimal required privileges
-
-3. **No Command Enumeration**: The API does not expose available commands, reducing information disclosure
-
-4. **Unix Domain Socket**: Local-only communication between API and daemon with file permission controls
-
-5. **Audit Logging**: All command executions are logged with full details for compliance and troubleshooting
+- **Command Allow-listing**: Only explicitly configured commands and arguments can be executed
+- **Privilege Separation**: API server runs without privileges in a container, while the daemon runs on the host with minimal required privileges
+- **No Command Enumeration**: The API does not expose available commands, reducing information disclosure
+- **Unix Domain Socket**: Local-only communication between API and daemon with file permission controls
+- **Audit Logging**: All command executions are logged with full details for compliance and troubleshooting
 
 ## Running Locally
 
