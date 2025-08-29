@@ -1,4 +1,4 @@
-package executor
+package validator
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/zinrai/sevalet/internal/models"
 )
 
-// Verifies if the command and arguments are allowed
+// ValidateCommand verifies if the command and arguments are allowed
 func ValidateCommand(cmd string, args []string, commandList *models.CommandList) error {
 	// Check if command list is nil
 	if commandList == nil {
@@ -16,13 +16,13 @@ func ValidateCommand(cmd string, args []string, commandList *models.CommandList)
 	// Check if command exists in the allowed list
 	command := commandList.FindCommand(cmd)
 	if command == nil {
-		return fmt.Errorf("command '%s' is not allowed", cmd)
+		return fmt.Errorf("command not allowed")
 	}
 
-	// Check if arguments are allowed
+	// Check if all arguments are allowed
 	for _, arg := range args {
 		if !command.IsArgAllowed(arg) {
-			return fmt.Errorf("argument '%s' is not allowed for command '%s'", arg, cmd)
+			return fmt.Errorf("argument not allowed")
 		}
 	}
 

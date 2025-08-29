@@ -8,72 +8,84 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Config struct {
-	Server         ServerConfig `yaml:"server"`
-	CommandsFile   string       `yaml:"commands_file"`
-	DefaultTimeout int          `yaml:"default_timeout"`
-	commandList    *models.CommandList
+// DaemonConfig represents the daemon mode configuration
+type DaemonConfig struct {
+	SocketPath        string             `yaml:"socket_path"`
+	SocketPermissions string             `yaml:"socket_permissions"`
+	MaxExecutionTime  int                `yaml:"max_execution_time"`
+	DefaultTimeout    int                `yaml:"default_timeout"`
+	Commands          models.CommandList `yaml:",inline"`
+	LogLevel          string             `yaml:"-"` // Set via command line only
 }
 
-type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
+// APIConfig represents the API mode configuration
+type APIConfig struct {
+	ListenAddress  string `yaml:"listen_address"`
+	SocketPath     string `yaml:"socket_path"`
+	RequestTimeout int    `yaml:"request_timeout"`
+	MaxBodySize    int    `yaml:"max_body_size"`
+	LogLevel       string `yaml:"-"` // Set via command line only
 }
 
-// Loads configuration from the specified file path
-func LoadConfig(configPath string) (*Config, error) {
-	data, err := os.ReadFile(configPath)
+// LoadDaemonConfig loads the daemon configuration from a YAML file
+func LoadDaemonConfig(path string) (*DaemonConfig, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var config Config
+	var config DaemonConfig
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	// Set default values
+	// Set defaults
+	if config.SocketPath == "" {
+		config.SocketPath = "/var/run/sevalet.sock"
+	}
+	if config.SocketPermissions == "" {
+		config.SocketPermissions = "0660"
+	}
+	if config.MaxExecutionTime <= 0 {
+		config.MaxExecutionTime = 300
+	}
 	if config.DefaultTimeout <= 0 {
 		config.DefaultTimeout = 30
 	}
 
-	// Load command list
-	if config.CommandsFile != "" {
-		if err := config.loadCommands(); err != nil {
-			return nil, err
-		}
+	// Validate commands
+	if len(config.Commands.Commands) == 0 {
+		return nil, fmt.Errorf("no commands defined in configuration")
 	}
 
 	return &config, nil
 }
 
-// Loads command list from the configuration file
-func (c *Config) loadCommands() error {
-	data, err := os.ReadFile(c.CommandsFile)
+// LoadAPIConfig loads the API configuration from a YAML file
+func LoadAPIConfig(path string) (*APIConfig, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("failed to read commands file: %w", err)
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var commandList models.CommandList
-	if err := yaml.Unmarshal(data, &commandList); err != nil {
-		return fmt.Errorf("failed to parse commands file: %w", err)
+	var config APIConfig
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	c.commandList = &commandList
-	return nil
-}
+	// Set defaults
+	if config.ListenAddress == "" {
+		config.ListenAddress = ":8080"
+	}
+	if config.SocketPath == "" {
+		config.SocketPath = "/var/run/sevalet.sock"
+	}
+	if config.RequestTimeout <= 0 {
+		config.RequestTimeout = 60
+	}
+	if config.MaxBodySize <= 0 {
+		config.MaxBodySize = 1048576 // 1MB
+	}
 
-// Returns the loaded command list
-func (c *Config) GetCommandList() *models.CommandList {
-	return c.commandList
-}
-
-// Returns the server address in "host:port" format
-func (c *Config) GetAddress() string {
-	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
-}
-
-// SetCommandList allows setting a command list directly (useful for testing)
-func (c *Config) SetCommandList(commandList *models.CommandList) {
-	c.commandList = commandList
+	return &config, nil
 }

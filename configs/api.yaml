@@ -1,0 +1,14 @@
+# Sevalet API Configuration
+
+# HTTP server settings
+listen_address: :8080
+
+# Unix domain socket to connect to daemon
+#socket_path: /var/run/sevalet.sock
+socket_path: /tmp/sevalet.sock
+
+# Request timeout in seconds
+request_timeout: 60
+
+# Maximum request body size in bytes (1MB)
+max_body_size: 1048576

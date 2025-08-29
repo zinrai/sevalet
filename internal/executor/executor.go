@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-type ExecutionResult struct {
+// Result contains the result of command execution
+type Result struct {
 	ExitCode      int
 	Stdout        string
 	Stderr        string
@@ -17,8 +18,8 @@ type ExecutionResult struct {
 	Error         error
 }
 
-// Executes the specified command
-func ExecuteCommand(ctx context.Context, command string, args []string, timeout int) *ExecutionResult {
+// ExecuteCommand executes the specified command with timeout
+func ExecuteCommand(ctx context.Context, command string, args []string, timeout int) *Result {
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
@@ -26,12 +27,12 @@ func ExecuteCommand(ctx context.Context, command string, args []string, timeout 
 	// Create command
 	cmd := exec.CommandContext(ctx, command, args...)
 
-	// Create buffers to capture stdout and stderr
+	// Create buffers for stdout and stderr
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// Start measuring execution time
+	// Start time measurement
 	startTime := time.Now()
 
 	// Execute command
@@ -40,30 +41,31 @@ func ExecuteCommand(ctx context.Context, command string, args []string, timeout 
 	// Calculate execution time
 	executionTime := time.Since(startTime).String()
 
-	// Create result object
-	result := &ExecutionResult{
+	// Create result
+	result := &Result{
 		Stdout:        strings.TrimSpace(stdout.String()),
 		Stderr:        strings.TrimSpace(stderr.String()),
 		ExecutionTime: executionTime,
 	}
 
-	// Error handling and status code retrieval
+	// Handle errors and exit codes
 	if err != nil {
-		// Special handling for timeout errors
+		// Check for timeout
 		if ctx.Err() == context.DeadlineExceeded {
-			result.Error = fmt.Errorf("command execution timed out: %s", err)
-			result.ExitCode = -1 // Special exit code for timeout
+			result.Error = fmt.Errorf("command execution timed out")
+			result.ExitCode = -1 // Special code for timeout
 		} else if exitErr, ok := err.(*exec.ExitError); ok {
-			// Command executed successfully but exited with non-zero code
+			// Command executed but returned non-zero exit code
 			result.ExitCode = exitErr.ExitCode()
-			result.Error = nil // This is a normal execution result, so error is null
+			// Don't set error for non-zero exit codes
+			// as this is a normal execution result
 		} else {
-			// Other errors
-			result.Error = fmt.Errorf("error occurred during command execution: %w", err)
-			result.ExitCode = -2 // Special exit code for general errors
+			// Other execution errors
+			result.Error = fmt.Errorf("command execution failed: %w", err)
+			result.ExitCode = -2 // Special code for general errors
 		}
 	} else {
-		// Success handling
+		// Success
 		result.ExitCode = 0
 	}
 
